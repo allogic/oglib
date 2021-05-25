@@ -42,6 +42,7 @@ enum : u32
   x = 0,
   y,
   z,
+  t,
 };
 enum : u32
 {
@@ -51,39 +52,163 @@ enum : u32
 };
 
 /*
+* Type deduction utilities.
+*/
+
+template<typename T>
+concept Primitivable = std::is_integral_v<T> || std::is_floating_point_v<T>;
+
+/*
 * Abstract vector types.
 */
 
-template<typename T, u32 Size>
+#pragma pack(push, 1)
+template<typename T, u32 S>
 struct tvn
 {
-  T Dims[Size]{};
+  T mDims[S] = {};
 
-  __forceinline T&       operator [] (u32 idx) { return Dims[idx]; }
-  __forceinline T const& operator [] (u32 idx) const { return Dims[idx]; }
+  template<Primitivable ... Dims>
+  __forceinline tvn(Dims&& ... dims)
+  {
+    u8 i = 0;
+    ((mDims[i++] = (T)dims), ...);
+  }
+  template<u32 SS, Primitivable ... Dims>
+  __forceinline tvn(tvn<T, SS> const& v, Dims&& ... dims)
+  {
+    constexpr u32 numDims = sizeof ... (Dims);
+    u8 i = 0;
+    switch (S)
+    {
+      case 2:
+      {
+        switch (SS)
+        {
+          case 2: { mDims[i] = v[i]; i++; mDims[i] = v[i]; break; }
+        }
+        break;
+      }
+      case 3:
+      {
+        switch (SS)
+        {
+          case 2: { mDims[i] = v[i]; i++; mDims[i] = v[i]; break; }
+          case 3: { mDims[i] = v[i]; i++; mDims[i] = v[i]; i++; mDims[i] = v[i]; break; }
+        }
+        break;
+      }
+      case 4:
+      {
+        switch (SS)
+        {
+          case 2: { mDims[i] = v[i]; i++; mDims[i] = v[i]; break; }
+          case 3: { mDims[i] = v[i]; i++; mDims[i] = v[i]; i++; mDims[i] = v[i]; break; }
+          case 4: { mDims[i] = v[i]; i++; mDims[i] = v[i]; i++; mDims[i] = v[i]; i++; mDims[i] = v[i]; break; }
+        }
+        break;
+      }
+    }
+    ((mDims[++i] = (T)dims), ...);
+  }
 
-  //template<typename T, 2>
-  //__forceinline tvn operator + (tvn const& lhs, tvn const& rhs);
+  __forceinline T&       operator [] (u32 idx)       { return mDims[idx]; }
+  __forceinline T const& operator [] (u32 idx) const { return mDims[idx]; }
 };
+#pragma pack(pop)
 
 export using r32v2 = tvn<r32, 2>;
 export using r32v3 = tvn<r32, 3>;
 export using r32v4 = tvn<r32, 4>;
 
 /*
+* Vector routines.
+*/
+
+export template<typename T, u32 S>
+__forceinline void Print(tvn<T, S> const& m) noexcept
+{
+  switch (S)
+  {
+    case 2: std::printf("[%.3f, %.3f]\n", m[x], m[y]); break;
+    case 3: std::printf("[%.3f, %.3f, %.3f]\n", m[x], m[y], m[z]); break;
+    case 4: std::printf("[%.3f, %.3f, %.3f, %.3f]\n", m[x], m[y], m[z], m[t]); break;
+  }
+}
+
+/*
 * Abstract matrix types.
 */
 
-template<typename T, u32 Size>
+#pragma pack(push, 1)
+template<typename T, u32 S>
 struct tmn
 {
-  T Dims[Size][Size]{};
-};
+  T mDims[S][S] = {};
 
+  __forceinline T       (& operator [](u32 idx))[S]       { return (mDims[idx]); }
+  __forceinline T const (& operator [](u32 idx) const)[S] { return (mDims[idx]); }
+};
+#pragma pack(pop)
+
+export using r32m2 = tmn<r32, 2>;
 export using r32m3 = tmn<r32, 3>;
+export using r32m4 = tmn<r32, 4>;
 
 /*
-* Vector math methods.
+* Matrix routines.
+*/
+
+export template<typename T, u32 S>
+__forceinline tmn<T, S>    Identity() noexcept
+{
+  return {};
+}
+export template<typename T, u32 S>
+__forceinline void         Print(tmn<T, S> const& m) noexcept
+{
+  switch (S)
+  {
+    case 2:
+    {
+      std::printf("[%.3f, %.3f,\n%.3f, %.3f]\n",
+        m[0][0], m[1][0],
+        m[0][1], m[1][1]
+      );
+      break;
+    }
+    case 3:
+    {
+      std::printf("[%.3f, %.3f, %.3f,\n%.3f, %.3f, %.3f,\n%.3f, %.3f, %.3f]\n",
+        m[0][0], m[1][0], m[2][0],
+        m[0][1], m[1][1], m[2][1],
+        m[0][2], m[1][2], m[2][2]
+      );
+      break;
+    };
+    case 4:
+    {
+      std::printf("[%.3f, %.3f, %.3f, %.3f,\n%.3f, %.3f, %.3f, %.3f,\n%.3f, %.3f, %.3f, %.3f,\n%.3f, %.3f, %.3f, %.3f]\n",
+        m[0][0], m[1][0], m[2][0], m[3][0],
+        m[0][1], m[1][1], m[2][1], m[3][1],
+        m[0][2], m[1][2], m[2][2], m[3][2],
+        m[0][3], m[1][3], m[2][3], m[3][3]
+      );
+      break;
+    }
+  }
+}
+export __forceinline r32m4 Perspective(r32 fov, r32 aspect, r32 near, r32 far) noexcept
+{
+  return {};
+}
+export __forceinline r32m4 View() noexcept
+{
+  return {};
+}
+
+/*
+* Linear math routines.
 */
 
 export __forceinline u32   AABB(r32v2 const& p0, r32v2 const& s0, r32v2 const& p1, r32v2 const& s1) noexcept

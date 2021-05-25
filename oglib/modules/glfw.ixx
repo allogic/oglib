@@ -25,6 +25,7 @@ export module glfw;
 
 import math;
 import acs;
+import render;
 
 /*
 * Forward decls.
@@ -47,11 +48,10 @@ export struct Sandbox
 {
   virtual void OnUpdate(r32 time) = 0;
   virtual void OnPhysic(r32 time) = 0;
-  virtual void OnRender(r32 time) const = 0;
 };
 
 /*
-* Window methods.
+* Window routines.
 */
 
 export template<Sandboxable S>
@@ -72,8 +72,23 @@ __forceinline s32 Start(u32 width, u32 height, u32 major, u32 minor, std::string
   {
     return -1;
   }
-  gladLoadGL();
   glfwMakeContextCurrent(pWindow);
+  if (!gladLoadGL())
+  {
+    glfwDestroyWindow(pWindow);
+    glfwTerminate();
+    return -1;
+  }
+  glDebugMessageCallback([](u32 source, u32 type, u32 id, u32 severity, s32 length, s8 const* msg, void const* userParam)
+    {
+      switch (severity)
+      {
+        case GL_DEBUG_SEVERITY_NOTIFICATION:                                                                   break;
+        case GL_DEBUG_SEVERITY_LOW:          std::printf("Severity:Low Type:0x%x Message:%s\n", type, msg);    break;
+        case GL_DEBUG_SEVERITY_MEDIUM:       std::printf("Severity:Medium Type:0x%x Message:%s\n", type, msg); break;
+        case GL_DEBUG_SEVERITY_HIGH:         std::printf("Severity:High Type:0x%x Message:%s\n", type, msg);   break;
+      }
+    }, 0);
   glfwSwapInterval(0);
   u32 running = 1;
   r32 time = 0.f;
@@ -88,6 +103,14 @@ __forceinline s32 Start(u32 width, u32 height, u32 major, u32 minor, std::string
     glfwTerminate();
     return -1;
   }
+  Renderer* pRenderer = new Renderer;
+  if (!pRenderer)
+  {
+    glfwDestroyWindow(pWindow);
+    glfwTerminate();
+    return -1;
+  }
+  RendererCreate(*pRenderer, width, height);
   while (running)
   {
     glfwPollEvents();
@@ -97,12 +120,15 @@ __forceinline s32 Start(u32 width, u32 height, u32 major, u32 minor, std::string
     if ((time - timeRenderPrev) >= timeRender)
     {
       pSandbox->OnPhysic(time);
-      pSandbox->OnRender(time);
+      RendererBegin(*pRenderer, time);
+      Render(*pRenderer);
+      RendererEnd(*pRenderer);
       glfwSwapBuffers(pWindow);
       timeRenderPrev = time;
     }
     timePrev = time;
   }
+  delete pRenderer;
   delete pSandbox;
   glfwDestroyWindow(pWindow);
   glfwTerminate();

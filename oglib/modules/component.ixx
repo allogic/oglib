@@ -5,7 +5,7 @@
 module;
 
 /*
-* Begin module components.
+* Begin module component.
 */
 
 export module component;
@@ -29,9 +29,9 @@ export struct Transform : Component
 
   Transform(r32v3 const& position, r32v3 const& rotation, r32v3 const& scale) : mPosition{ position }, mRotation{ rotation }, mScale{ mScale } {}
 };
-export struct Renderable : Component
+export struct Camera : Component
 {
-
+  
 };
 export struct Rigidbody : Component
 {

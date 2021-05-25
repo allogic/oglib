@@ -11,6 +11,7 @@ module;
 #include <string>
 #include <array>
 #include <map>
+#include <unordered_map>
 #include <type_traits>
 #include <functional>
 
@@ -44,7 +45,7 @@ export struct Component;
 */
 
 template<typename T>
-struct Identity
+struct Proxy
 {
   using Type = T;
   using Ref  = T&;
@@ -97,9 +98,10 @@ export struct Component
 
 std::array<Transform, MAX_ACTORS> sTransforms  = {};
 std::map<std::string, Actor*>     sNameToActor = {};
+std::unordered_map<u64, Actor*>   sHashToActor = {};
 
 /*
-* Actor specific methods.
+* Actor specific routines.
 */
 
 export template<Actorable A, typename ... Args>
@@ -124,7 +126,7 @@ __forceinline A* Destroy(std::string const& name) noexcept
 }
 
 /*
-* Component specific methods.
+* Component specific routines.
 */
 
 export template<Componentable C, typename ... Args>
@@ -148,14 +150,16 @@ __forceinline C* Detach() noexcept
 }
 
 /*
-* Dispatch specific methods.
+* Dispatch specific routines.
 */
 
+// TODO: provide unique xor'd component key hash eg. typeid(Cs).hash_code() | ...
+
 export template<Componentable ... Cs>
-__forceinline void Dispatch(std::function<void(typename Identity<Cs>::Ptr ...)>&& predicate) noexcept
+__forceinline void Dispatch(std::function<void(typename Proxy<Cs>::Ptr ...)>&& predicate) noexcept
 {
   for (auto const& [name, pActor] : sNameToActor)
   {
-    predicate(((typename Identity<Cs>::Ptr)(*pActor->mpComponents)[typeid(typename Identity<Cs>::Type).hash_code()]) ...);
+    predicate(((typename Proxy<Cs>::Ptr)(*pActor->mpComponents)[typeid(typename Proxy<Cs>::Type).hash_code()]) ...);
   }
 }
