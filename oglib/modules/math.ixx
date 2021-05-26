@@ -37,14 +37,14 @@ export using r64 = double;
 * Dimensioal access token.
 */
 
-enum : u32
+enum : u8
 {
   x = 0,
   y,
   z,
   t,
 };
-enum : u32
+enum : u8
 {
   w = 0,
   h,
@@ -63,7 +63,7 @@ concept Primitivable = std::is_integral_v<T> || std::is_floating_point_v<T>;
 */
 
 #pragma pack(push, 1)
-template<typename T, u32 S>
+template<typename T, u8 S>
 struct tvn
 {
   T mDims[S] = {};
@@ -74,18 +74,16 @@ struct tvn
     u8 i = 0;
     ((mDims[i++] = (T)dims), ...);
   }
-  template<u32 SS, Primitivable ... Dims>
+  template<u8 SS, Primitivable ... Dims>
   __forceinline tvn(tvn<T, SS> const& v, Dims&& ... dims)
   {
-    constexpr u32 numDims = sizeof ... (Dims);
-    u8 i = 0;
     switch (S)
     {
       case 2:
       {
         switch (SS)
         {
-          case 2: { mDims[i] = v[i]; i++; mDims[i] = v[i]; break; }
+          case 2: { mDims[0] = v[0]; mDims[1] = v[1]; break; }
         }
         break;
       }
@@ -93,8 +91,8 @@ struct tvn
       {
         switch (SS)
         {
-          case 2: { mDims[i] = v[i]; i++; mDims[i] = v[i]; break; }
-          case 3: { mDims[i] = v[i]; i++; mDims[i] = v[i]; i++; mDims[i] = v[i]; break; }
+          case 2: { mDims[0] = v[0]; mDims[1] = v[1]; break; }
+          case 3: { mDims[0] = v[0]; mDims[1] = v[1]; mDims[2] = v[2]; break; }
         }
         break;
       }
@@ -102,18 +100,19 @@ struct tvn
       {
         switch (SS)
         {
-          case 2: { mDims[i] = v[i]; i++; mDims[i] = v[i]; break; }
-          case 3: { mDims[i] = v[i]; i++; mDims[i] = v[i]; i++; mDims[i] = v[i]; break; }
-          case 4: { mDims[i] = v[i]; i++; mDims[i] = v[i]; i++; mDims[i] = v[i]; i++; mDims[i] = v[i]; break; }
+          case 2: { mDims[0] = v[0]; mDims[1] = v[1]; break; }
+          case 3: { mDims[0] = v[0]; mDims[1] = v[1]; mDims[2] = v[2]; break; }
+          case 4: { mDims[0] = v[0]; mDims[1] = v[1]; mDims[2] = v[2]; mDims[3] = v[3]; break; }
         }
         break;
       }
     }
-    ((mDims[++i] = (T)dims), ...);
+    u8 i = SS;
+    ((mDims[i++] = (T)dims), ...);
   }
 
-  __forceinline T&       operator [] (u32 idx)       { return mDims[idx]; }
-  __forceinline T const& operator [] (u32 idx) const { return mDims[idx]; }
+  __forceinline T&       operator [] (u8 idx)       { return mDims[idx]; }
+  __forceinline T const& operator [] (u8 idx) const { return mDims[idx]; }
 };
 #pragma pack(pop)
 
@@ -125,7 +124,7 @@ export using r32v4 = tvn<r32, 4>;
 * Vector routines.
 */
 
-export template<typename T, u32 S>
+export template<typename T, u8 S>
 __forceinline void Print(tvn<T, S> const& m) noexcept
 {
   switch (S)
@@ -141,13 +140,13 @@ __forceinline void Print(tvn<T, S> const& m) noexcept
 */
 
 #pragma pack(push, 1)
-template<typename T, u32 S>
+template<typename T, u8 S>
 struct tmn
 {
   T mDims[S][S] = {};
 
-  __forceinline T       (& operator [](u32 idx))[S]       { return (mDims[idx]); }
-  __forceinline T const (& operator [](u32 idx) const)[S] { return (mDims[idx]); }
+  __forceinline T       (& operator [](u8 idx))[S]       { return (mDims[idx]); }
+  __forceinline T const (& operator [](u8 idx) const)[S] { return (mDims[idx]); }
 };
 #pragma pack(pop)
 
@@ -159,12 +158,12 @@ export using r32m4 = tmn<r32, 4>;
 * Matrix routines.
 */
 
-export template<typename T, u32 S>
+export template<typename T, u8 S>
 __forceinline tmn<T, S>    Identity() noexcept
 {
   return {};
 }
-export template<typename T, u32 S>
+export template<typename T, u8 S>
 __forceinline void         Print(tmn<T, S> const& m) noexcept
 {
   switch (S)

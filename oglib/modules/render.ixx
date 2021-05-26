@@ -12,6 +12,8 @@ module;
 #include <cstdio>
 #include <vector>
 #include <fstream>
+#include <deque>
+#include <type_traits>
 
 #include "glad.h"
 
@@ -165,6 +167,13 @@ void        MeshLayoutClear(MeshLayout<V, I> const& meshLayout, u32 subMeshIndex
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, meshLayout.mEbos[subMeshIndex]);
   glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, 0, meshLayout.mIndexBufferSizes[subMeshIndex] * sizeof(I), nullptr);
 }
+export template<typename V, typename I>
+void        MeshLayoutDestroy(MeshLayout<V, I> const& meshLayout)
+{
+  glDeleteBuffers(meshLayout.mNumSubMeshes, meshLayout.mVbos.data());
+  glDeleteBuffers(meshLayout.mNumSubMeshes, meshLayout.mEbos.data());
+  glDeleteVertexArrays(meshLayout.mNumSubMeshes, meshLayout.mVaos.data());
+}
 
 /*
 * Mesh rendering specific routines.
@@ -276,9 +285,9 @@ void MeshLayoutRenderInstancedPartial(MeshLayout<V, I> const& meshLayout, u32 su
 
 struct ShaderPaths
 {
-  std::string mVertexShader;
-  std::string mFragmentShader;
-  std::string mComputeShader;
+  std::string mVertexSource;
+  std::string mFragmentSource;
+  std::string mComputeSource;
 };
 
 enum ShaderLayoutType : u32
@@ -391,11 +400,11 @@ void        ShaderLayoutCreate(ShaderLayout<L>& shaderLayout, ShaderPaths const&
     case SHADER_LAYOUT_GIZMO:
     case SHADER_LAYOUT_SCREEN:
     {
-      ShaderLayoutLoadBinary(shaderBytes, shaderPaths.mVertexShader);
+      ShaderLayoutLoadBinary(shaderBytes, shaderPaths.mVertexSource);
       glShaderBinary(1, &shaderLayout.mVertId, GL_SHADER_BINARY_FORMAT_SPIR_V, shaderBytes.data(), (s32)shaderBytes.size());
       glSpecializeShader(shaderLayout.mVertId, "main", 0, nullptr, nullptr);
       if (!ShaderLayoutCheckCompileStatus(shaderLayout.mVertId, log)) std::printf("%s\n", log.data());
-      ShaderLayoutLoadBinary(shaderBytes, shaderPaths.mFragmentShader);
+      ShaderLayoutLoadBinary(shaderBytes, shaderPaths.mFragmentSource);
       glShaderBinary(1, &shaderLayout.mFragId, GL_SHADER_BINARY_FORMAT_SPIR_V, shaderBytes.data(), (s32)shaderBytes.size());
       glSpecializeShader(shaderLayout.mFragId, "main", 0, nullptr, nullptr);
       if (!ShaderLayoutCheckCompileStatus(shaderLayout.mFragId, log)) std::printf("%s\n", log.data());
@@ -403,7 +412,7 @@ void        ShaderLayoutCreate(ShaderLayout<L>& shaderLayout, ShaderPaths const&
     }
     case SHADER_LAYOUT_COMPUTE:
     {
-      ShaderLayoutLoadBinary(shaderBytes, shaderPaths.mComputeShader);
+      ShaderLayoutLoadBinary(shaderBytes, shaderPaths.mComputeSource);
       glShaderBinary(1, &shaderLayout.mCompId, GL_SHADER_BINARY_FORMAT_SPIR_V, shaderBytes.data(), (s32)shaderBytes.size());
       glSpecializeShader(shaderLayout.mCompId, "main", 0, nullptr, nullptr);
       if (!ShaderLayoutCheckCompileStatus(shaderLayout.mCompId, log)) std::printf("%s\n", log.data());
@@ -461,6 +470,14 @@ export template<ShaderLayoutType L>
 void        ShaderLayoutCompute(ShaderLayout<L> const& shaderLayout, u32 numThreadsX, u32 numThreadsY, u32 numThreadsZ)
 {
   glDispatchCompute(numThreadsX, numThreadsY, numThreadsZ);
+}
+export template<ShaderLayoutType L>
+void        ShaderLayoutDestroy(ShaderLayout<L> const& shaderLayout)
+{
+  if (shaderLayout.mVertId) glDeleteShader(shaderLayout.mVertId);
+  if (shaderLayout.mFragId) glDeleteShader(shaderLayout.mFragId);
+  if (shaderLayout.mCompId) glDeleteShader(shaderLayout.mCompId);
+  if (shaderLayout.mProgId) glDeleteProgram(shaderLayout.mProgId);
 }
 
 /*
@@ -544,6 +561,11 @@ void        UniformLayoutDataGet(UniformLayout<B> const& uniformLayout, u32 buff
 {
   glGetBufferSubData(GL_UNIFORM_BUFFER, 0, bufferSize * sizeof(B), pBufferData);
 }
+export template<typename B>
+void        UniformLayoutDestroy(UniformLayout<B> const& uniformLayout)
+{
+  glDeleteBuffers(1, &uniformLayout.mUbo);
+}
 
 /*
 * SSBO layouts.
@@ -623,82 +645,92 @@ struct UniformBlockCamera
 #pragma pack(pop)
 
 /*
+* Render task layouts.
+*/
+
+struct TaskDeferred
+{
+  Transform*     mpTransform;
+  MeshLambert*   mpMeshLambert;
+  ShaderLambert* mpShaderLambert;
+};
+
+/*
 * Renderer layouts.
 */
 
-export struct Renderer
+export struct DeferredRenderer
 {
   u32                                   mWidth;
   u32                                   mHeight;
+  std::deque<TaskDeferred>              mRenderQueue;
   UniformLayout<UniformBlockGlobal>     mUniformGlobal;
   UniformLayout<UniformBlockProjection> mUniformProjection;
   UniformLayout<UniformBlockCamera>     mUniformCamera;
+  r32m4                                 mTransformGizmo;
+  MeshGizmo                             mMeshGizmo;
   ShaderGizmo                           mShaderGizmo;
   ShaderLambert                         mShaderLambert;
   ShaderLambertInstanced                mShaderLambertInstanced;
-  r32m4                                 mTransformGizmo;
-  MeshGizmo                             mMeshGizmoLines;
   u32                                   mVertexOffsetGizmoLineBatch;
   u32                                   mIndexOffsetGizmoLineBatch;
 };
 
 /*
-* Render pass routines.
+* Pass routines.
 */
 
-void RenderPassGeometry(Renderer& renderer)
+void PassGeometry(DeferredRenderer& renderer)
 {
 
 }
-void RenderPassGeometryInstanced(Renderer& renderer)
+void PassGeometryInstanced(DeferredRenderer& renderer)
 {
 
 }
-void RenderPassLight(Renderer& renderer)
+void PassLight(DeferredRenderer& renderer)
 {
 
 }
-void RenderPassGizmo(Renderer& renderer)
+void PassGizmo(DeferredRenderer& renderer)
 {
 
 }
 
 /*
-* Renderer specific routines.
+* Dispatch specific routines.
 */
 
-export void RendererCreate(Renderer& renderer, u32 width, u32 height)
+export void DeferredRendererCreate(DeferredRenderer& renderer, u32 width, u32 height)
 {
-  renderer.mWidth = width;
-  renderer.mHeight = height;
   UniformLayoutCreate(renderer.mUniformGlobal);
   UniformLayoutCreate(renderer.mUniformProjection);
   UniformLayoutCreate(renderer.mUniformCamera);
+  std::vector<u32> gizmoVertexBufferSizes{ 131070 };
+  std::vector<u32> gizmoIndexBufferSizes{ 131070 * 2 };
+  MeshLayoutCreate(renderer.mMeshGizmo, 1, gizmoVertexBufferSizes.data(), gizmoIndexBufferSizes.data());
   ShaderLayoutCreate(renderer.mShaderGizmo, ShaderPaths
     {
-      .mVertexShader{ "C:\\Users\\Michael\\Downloads\\oglib\\oglib\\shaders\\spriv\\Gizmo.vert" },
-      .mFragmentShader{ "C:\\Users\\Michael\\Downloads\\oglib\\oglib\\shaders\\spriv\\Gizmo.frag" }
+      .mVertexSource{ "C:\\Users\\Michael\\Downloads\\oglib\\spirv\\compiled\\gizmo.vert" },
+      .mFragmentSource{ "C:\\Users\\Michael\\Downloads\\oglib\\spirv\\compiled\\gizmo.frag" }
     });
   ShaderLayoutCreate(renderer.mShaderLambert, ShaderPaths
     {
-      .mVertexShader{ "C:\\Users\\Michael\\Downloads\\oglib\\oglib\\shaders\\spriv\\Lambert.vert" },
-      .mFragmentShader{ "C:\\Users\\Michael\\Downloads\\oglib\\oglib\\shaders\\spriv\\Lambert.frag" }
+      .mVertexSource{ "C:\\Users\\Michael\\Downloads\\oglib\\spirv\\compiled\\lambert.vert" },
+      .mFragmentSource{ "C:\\Users\\Michael\\Downloads\\oglib\\spirv\\compiled\\lambert.frag" }
     });
   ShaderLayoutCreate(renderer.mShaderLambertInstanced, ShaderPaths
     {
-      .mVertexShader{ "C:\\Users\\Michael\\Downloads\\oglib\\oglib\\shaders\\spriv\\LambertInstanced.vert" },
-      .mFragmentShader{ "C:\\Users\\Michael\\Downloads\\oglib\\oglib\\shaders\\spriv\\Lambert.frag" },
+      .mVertexSource{ "C:\\Users\\Michael\\Downloads\\oglib\\spirv\\compiled\\lambert_instanced.vert" },
+      .mFragmentSource{ "C:\\Users\\Michael\\Downloads\\oglib\\spirv\\compiled\\lambert_instanced.frag" }
     });
-  std::vector<u32> gizmoVertexBufferSizes = { 131070 };
-  std::vector<u32> gizmoIndexBufferSizes = { 131070 * 2 };
-  MeshLayoutCreate(renderer.mMeshGizmoLines, 1, gizmoVertexBufferSizes.data(), gizmoIndexBufferSizes.data());
 }
-export void RendererBegin(Renderer& renderer, r32 time)
+export void DeferredRenderBegin(DeferredRenderer& renderer, r32 time)
 {
-  //Dispatch<Transform, Camera>([&](Transform* pTransform, Camera* pCamera)
-  //  {
-  //
-  //  });
+  Dispatch<Transform, Renderable>([&](Transform* pTransform, Renderable* pRenderable)
+    {
+      renderer.mRenderQueue.push_front(TaskDeferred{ pTransform, (MeshLambert*)pRenderable->mpMeshLayout, (ShaderLambert*)pRenderable->mpShaderLayout });
+    });
   UniformBlockGlobal uniformBlockGlobal = { time, r32v2{ (r32)renderer.mWidth, (r32)renderer.mHeight } };
   UniformBlockProjection uniformBlockProjection = { r32m4{}, r32m4{}, r32m4{} };
   UniformBlockCamera uniformBlockCamera = { r32v3{} };
@@ -709,11 +741,11 @@ export void RendererBegin(Renderer& renderer, r32 time)
   UniformLayoutBind(renderer.mUniformCamera);
   UniformLayoutData(renderer.mUniformCamera, 1, &uniformBlockCamera);
   UniformLayoutUnBind();
-  MeshLayoutBind(renderer.mMeshGizmoLines, 0);
-  MeshLayoutClear(renderer.mMeshGizmoLines, 0);
+  MeshLayoutBind(renderer.mMeshGizmo, 0);
+  MeshLayoutClear(renderer.mMeshGizmo, 0);
   MeshLayoutUnBind();
 }
-export void Render(Renderer& renderer)
+export void DeferredRender(DeferredRenderer& renderer)
 {
   glClearColor(0.f, 0.f, 0.f, 1.f);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -744,11 +776,11 @@ export void Render(Renderer& renderer)
   // Gizmo pass
   glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
   glEnable(GL_DEPTH_TEST);
-  RenderPassGizmo(renderer);
+  PassGizmo(renderer);
   glDisable(GL_DEPTH_TEST);
   glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
-export void RendererEnd(Renderer& renderer)
+export void DeferredRenderEnd(DeferredRenderer& renderer)
 {
   MeshLayoutUnBind();
   ShaderLayoutUnBind();
@@ -757,20 +789,30 @@ export void RendererEnd(Renderer& renderer)
   renderer.mVertexOffsetGizmoLineBatch = 0;
   renderer.mIndexOffsetGizmoLineBatch = 0;
 }
+export void DeferredRendererDestroy(DeferredRenderer const& renderer)
+{
+  UniformLayoutDestroy(renderer.mUniformGlobal);
+  UniformLayoutDestroy(renderer.mUniformProjection);
+  UniformLayoutDestroy(renderer.mUniformCamera);
+  MeshLayoutDestroy(renderer.mMeshGizmo);
+  ShaderLayoutDestroy(renderer.mShaderGizmo);
+  ShaderLayoutDestroy(renderer.mShaderLambert);
+  ShaderLayoutDestroy(renderer.mShaderLambertInstanced);
+}
 
 /*
-* Gizmo specific render routines.
+* Gizmo drawing routines.
 */
 
-export void RendererLineBatchPushMatrix(Renderer& renderer, r32m4 const& transform)
+export void GizmoPushMatrix(DeferredRenderer& renderer, r32m4 const& transform)
 {
   renderer.mTransformGizmo = transform;
 }
-export void RendererLineBatchPopMatrix(Renderer& renderer)
+export void GizmoPopMatrix(DeferredRenderer& renderer)
 {
   renderer.mTransformGizmo = Identity<r32, 4>();
 }
-export void RendererLineBatchPushLine(Renderer& renderer, r32v3 const& p0, r32v3 const& p1, r32v4 const& color)
+export void GizmoPushLine(DeferredRenderer& renderer, r32v3 const& p0, r32v3 const& p1, r32v4 const& color)
 {
   //r32v3 v0 = renderer.mTransformGizmo * r32v4{ p0, 1.f };
   //r32v3 v1 = renderer.mTransformGizmo * r32v4{ p1, 1.f };
@@ -780,7 +822,7 @@ export void RendererLineBatchPushLine(Renderer& renderer, r32v3 const& p0, r32v3
   //renderer.mVertexOffsetGizmoLineBatch += 2;
   //renderer.mIndexOffsetGizmoLineBatch += 2;
 }
-export void RendererLineBatchPushBox(Renderer& renderer, r32v3 const& position, r32v3 const& size, r32v4 const& color)
+export void GizmoPushBox(DeferredRenderer& renderer, r32v3 const& position, r32v3 const& size, r32v4 const& color)
 {
   /*
   r32v3 blf = renderer.mTransformGizmo * r32v4{ -size.x, -size.y, -size.z, 1.f };

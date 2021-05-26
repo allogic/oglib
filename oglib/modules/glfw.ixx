@@ -103,14 +103,8 @@ __forceinline s32 Start(u32 width, u32 height, u32 major, u32 minor, std::string
     glfwTerminate();
     return -1;
   }
-  Renderer* pRenderer = new Renderer;
-  if (!pRenderer)
-  {
-    glfwDestroyWindow(pWindow);
-    glfwTerminate();
-    return -1;
-  }
-  RendererCreate(*pRenderer, width, height);
+  DeferredRenderer renderer;
+  DeferredRendererCreate(renderer, width, height);
   while (running)
   {
     glfwPollEvents();
@@ -120,15 +114,15 @@ __forceinline s32 Start(u32 width, u32 height, u32 major, u32 minor, std::string
     if ((time - timeRenderPrev) >= timeRender)
     {
       pSandbox->OnPhysic(time);
-      RendererBegin(*pRenderer, time);
-      Render(*pRenderer);
-      RendererEnd(*pRenderer);
+      DeferredRenderBegin(renderer, time);
+      DeferredRender(renderer);
+      DeferredRenderEnd(renderer);
       glfwSwapBuffers(pWindow);
       timeRenderPrev = time;
     }
     timePrev = time;
   }
-  delete pRenderer;
+  DeferredRendererDestroy(renderer);
   delete pSandbox;
   glfwDestroyWindow(pWindow);
   glfwTerminate();

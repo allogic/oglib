@@ -28,6 +28,9 @@ struct Demo : Sandbox
 
     Create<Box>("Box", r32v3{ 0, 0, 0 });
 
+    // TODO: test component selects
+    // TODO: test gizmo rendering & queues
+
     r32v2 v2 = { 1.f, 2.f };
     r32v3 v3 = { v2, 3.f };
     r32v4 v4 = { v3, 4.f };
@@ -44,7 +47,7 @@ struct Demo : Sandbox
     Print(m3);
     Print(m4);
   }
-  ~Demo()
+  virtual ~Demo()
   {
     std::cout << "Demo destroyed\n";
   }

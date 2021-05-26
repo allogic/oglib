@@ -1,5 +1,15 @@
 /*
 * Actor component system.
+* 
+* Query 1024
+* Query 1024 | 512
+* 
+* ---A-----------------------------
+*    |
+*    Transform
+*    |
+*    Renderable
+*
 */
 
 module;
@@ -84,8 +94,9 @@ using Components = std::map<u64, Component*>;
 
 export struct Actor
 {
-  u32         mTransformIndex = 0;
-  Components* mpComponents    = nullptr;
+  u32         mTransformIndex;
+  u64         mComponentMask;
+  Components* mpComponents;
 };
 export struct Component
 {
@@ -98,7 +109,6 @@ export struct Component
 
 std::array<Transform, MAX_ACTORS> sTransforms  = {};
 std::map<std::string, Actor*>     sNameToActor = {};
-std::unordered_map<u64, Actor*>   sHashToActor = {};
 
 /*
 * Actor specific routines.
@@ -140,6 +150,7 @@ __forceinline C* Attach(Actor* pActor, Args&& ... args) noexcept
   if (!pComponent)
   {
     pComponent = new C{ std::forward<Args>(args) ... };
+    pActor->mComponentMask = ~typeid(C).hash_code();
   }
   return (C*)pComponent;
 }
@@ -158,6 +169,8 @@ __forceinline C* Detach() noexcept
 export template<Componentable ... Cs>
 __forceinline void Dispatch(std::function<void(typename Proxy<Cs>::Ptr ...)>&& predicate) noexcept
 {
+  u64 const componentHash = ((u64)0u | ... | typeid(typename Proxy<Cs>::Type).hash_code());
+
   for (auto const& [name, pActor] : sNameToActor)
   {
     predicate(((typename Proxy<Cs>::Ptr)(*pActor->mpComponents)[typeid(typename Proxy<Cs>::Type).hash_code()]) ...);

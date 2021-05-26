@@ -51,12 +51,4 @@
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
-  <ItemGroup>
-    <None Include="shaders\glsl\gizmo.frag" />
-    <None Include="shaders\glsl\gizmo.vert" />
-    <None Include="shaders\glsl\lambert.frag" />
-    <None Include="shaders\glsl\lambert.vert" />
-    <None Include="shaders\glsl\lambert_instanced.frag" />
-    <None Include="shaders\glsl\lambert_instanced.vert" />
-  </ItemGroup>
 </Project>

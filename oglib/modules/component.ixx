@@ -21,6 +21,8 @@ import acs;
 * Components.
 */
 
+// TODO: all components contain ONLY ptr
+
 export struct Transform : Component
 {
   r32v3 mPosition;
@@ -32,6 +34,13 @@ export struct Transform : Component
 export struct Camera : Component
 {
   
+};
+export struct Renderable : Component
+{
+  void* mpMeshLayout;
+  void* mpShaderLayout;
+
+  Renderable(void* meshLayout, void* shaderLayout) : mpMeshLayout{ meshLayout }, mpShaderLayout{ shaderLayout } {}
 };
 export struct Rigidbody : Component
 {
