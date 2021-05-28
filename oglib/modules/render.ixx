@@ -747,38 +747,45 @@ export void DeferredRenderBegin(DeferredRenderer& renderer, r32 time)
 }
 export void DeferredRender(DeferredRenderer& renderer)
 {
-  glClearColor(0.f, 0.f, 0.f, 1.f);
-  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+  while (!renderer.mRenderQueue.empty())
+  {
+    TaskDeferred& task = renderer.mRenderQueue.front();
 
-  // Geometry pass
-  //glBindFramebuffer(GL_DRAW_FRAMEBUFFER, renderer.mFrameBufferDeferred.mFbo);
-  //glClearColor(1.f, 0.f, 0.f, 1.f);
-  //glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-  //glEnable(GL_DEPTH_TEST);
-  //glEnable(GL_BLEND);
-  //glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-  //RenderPassGeometry(renderer);
-  //RenderPassGeometryInstanced(renderer);
-  //glDisable(GL_BLEND);
-  //glDisable(GL_DEPTH_TEST);
-  //glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glClearColor(0.f, 0.f, 0.f, 1.f);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-  // Light pass
-  //glBindFramebuffer(GL_READ_FRAMEBUFFER, renderer.mFrameBufferDeferred.mFbo);
-  //RenderPassLight(renderer);
-  //glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    // Geometry pass
+    //glBindFramebuffer(GL_DRAW_FRAMEBUFFER, renderer.mFrameBufferDeferred.mFbo);
+    //glClearColor(1.f, 0.f, 0.f, 1.f);
+    //glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    //glEnable(GL_DEPTH_TEST);
+    //glEnable(GL_BLEND);
+    //glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    //RenderPassGeometry(renderer);
+    //RenderPassGeometryInstanced(renderer);
+    //glDisable(GL_BLEND);
+    //glDisable(GL_DEPTH_TEST);
+    //glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-  // Copy geometry depth into default framebuffer
-  //glBindFramebuffer(GL_READ_FRAMEBUFFER, renderer.mFrameBufferDeferred.mFbo);
-  //glBlitFramebuffer(0, 0, renderer.mWidth, renderer.mHeight, 0, 0, renderer.mWidth, renderer.mHeight, GL_DEPTH_BUFFER_BIT, GL_NEAREST);
-  //glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    // Light pass
+    //glBindFramebuffer(GL_READ_FRAMEBUFFER, renderer.mFrameBufferDeferred.mFbo);
+    //RenderPassLight(renderer);
+    //glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-  // Gizmo pass
-  glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
-  glEnable(GL_DEPTH_TEST);
-  PassGizmo(renderer);
-  glDisable(GL_DEPTH_TEST);
-  glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    // Copy geometry depth into default framebuffer
+    //glBindFramebuffer(GL_READ_FRAMEBUFFER, renderer.mFrameBufferDeferred.mFbo);
+    //glBlitFramebuffer(0, 0, renderer.mWidth, renderer.mHeight, 0, 0, renderer.mWidth, renderer.mHeight, GL_DEPTH_BUFFER_BIT, GL_NEAREST);
+    //glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+    // Gizmo pass
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+    glEnable(GL_DEPTH_TEST);
+    PassGizmo(renderer);
+    glDisable(GL_DEPTH_TEST);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+    renderer.mRenderQueue.pop_front();
+  }
 }
 export void DeferredRenderEnd(DeferredRenderer& renderer)
 {

@@ -1,15 +1,17 @@
 /*
 * Actor component system.
 * 
-* Query 1024
-* Query 1024 | 512
-* 
+* Actor structure:
 * ---A-----------------------------
 *    |
 *    Transform
 *    |
 *    Renderable
-*
+* 
+* Transaction structure:
+* ---C0-----------C0C1-------------
+*    |            |
+*    [Actor, ...] [Actor, ...]
 */
 
 module;
@@ -18,9 +20,12 @@ module;
 * Includes.
 */
 
+#include <iostream>
+#include <bitset>
 #include <string>
 #include <array>
 #include <map>
+#include <set>
 #include <unordered_map>
 #include <type_traits>
 #include <functional>
@@ -57,7 +62,6 @@ export struct Component;
 template<typename T>
 struct Proxy
 {
-  using Type = T;
   using Ref  = T&;
   using CRef = T const&;
   using Ptr  = T*;
@@ -86,7 +90,9 @@ struct Transform
 * Primitives.
 */
 
-using Components = std::map<u64, Component*>;
+using Actors       = std::map<std::string, Actor*>;
+using Components   = std::map<u64, Component*>;
+using Transactions = std::map<u64, std::multiset<Actor*>>;
 
 /*
 * Interfaces for actors and components.
@@ -94,9 +100,8 @@ using Components = std::map<u64, Component*>;
 
 export struct Actor
 {
-  u32         mTransformIndex;
-  u64         mComponentMask;
-  Components* mpComponents;
+  u64         mComponentMask  = 0;
+  Components* mpComponents    = nullptr;
 };
 export struct Component
 {
@@ -107,8 +112,8 @@ export struct Component
 * Global state registry.
 */
 
-std::array<Transform, MAX_ACTORS> sTransforms  = {};
-std::map<std::string, Actor*>     sNameToActor = {};
+Actors       sActors       = {};
+Transactions sTransactions = {};
 
 /*
 * Actor specific routines.
@@ -117,7 +122,7 @@ std::map<std::string, Actor*>     sNameToActor = {};
 export template<Actorable A, typename ... Args>
 __forceinline A* Create(std::string const& name, Args&& ... args) noexcept
 {
-  auto& pActor = sNameToActor[name];
+  auto& pActor = sActors[name];
   if (!pActor)
   {
     pActor = new A{ std::forward<Args>(args) ... };
@@ -146,11 +151,13 @@ __forceinline C* Attach(Actor* pActor, Args&& ... args) noexcept
   {
     pActor->mpComponents = new Components;
   }
-  Component* pComponent = &(*pActor->mpComponents)[typeid(C).hash_code()];
+  auto& pComponent = (*pActor->mpComponents)[typeid(C).hash_code()];
   if (!pComponent)
   {
     pComponent = new C{ std::forward<Args>(args) ... };
-    pActor->mComponentMask = ~typeid(C).hash_code();
+    pActor->mComponentMask |= ~typeid(C).hash_code();
+    sTransactions[typeid(C).hash_code()].emplace(pActor);
+    sTransactions[pActor->mComponentMask].emplace(pActor);
   }
   return (C*)pComponent;
 }
@@ -164,15 +171,12 @@ __forceinline C* Detach() noexcept
 * Dispatch specific routines.
 */
 
-// TODO: provide unique xor'd component key hash eg. typeid(Cs).hash_code() | ...
-
 export template<Componentable ... Cs>
 __forceinline void Dispatch(std::function<void(typename Proxy<Cs>::Ptr ...)>&& predicate) noexcept
 {
-  u64 const componentHash = ((u64)0u | ... | typeid(typename Proxy<Cs>::Type).hash_code());
-
-  for (auto const& [name, pActor] : sNameToActor)
+  u64 const componentHash = ((u64)0u | ... | ~typeid(Cs).hash_code());
+  for (auto const& pActor : sTransactions[componentHash])
   {
-    predicate(((typename Proxy<Cs>::Ptr)(*pActor->mpComponents)[typeid(typename Proxy<Cs>::Type).hash_code()]) ...);
+    predicate(((typename Proxy<Cs>::Ptr)(*pActor->mpComponents)[typeid(Cs).hash_code()]) ...);
   }
 }
