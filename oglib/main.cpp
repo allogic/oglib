@@ -62,25 +62,7 @@ struct Demo : Sandbox
     // TODO: test component selects
     Create<Box>("Box0", r32v3{ 0, 0, 0 });
     Create<Box>("Box1", r32v3{ 0, 0, 0 });
-    Create<Player>("Player", r32v3{ 0, 0, 0 });
-
-    int i = 0;
-    Dispatch<Transform>([&i](Transform* pTransform)
-      {
-        std::cout << i++ << ":Transform:" << pTransform << std::endl;
-      });
-    Dispatch<Transform, Renderable>([&i](Transform* pTransform, Renderable* pRenderable)
-      {
-        std::cout << i++ << ":Transform:" << pTransform << ":Renderable:" << pRenderable << std::endl;
-      });
-    Dispatch<Transform, Rigidbody>([&i](Transform* pTransform, Rigidbody* pRigidbody)
-      {
-        std::cout << i++ << ":Transform:" << pTransform << ":Rigidbody:" << pRigidbody << std::endl;
-      });
-    Dispatch<Transform, Renderable, Rigidbody>([&i](Transform* pTransform, Renderable* pRenderable, Rigidbody* pRigidbody)
-      {
-        std::cout << i++ << ":Transform:" << pTransform << ":Renderable:" << pRenderable << ":Rigidbody:" << pRigidbody << std::endl;
-      });
+    Create<Player>("Player", r32v3{ 0, 0, -10 });
 
     int i = 0;
     Dispatch<Transform>([&i](Transform* pTransform)
