@@ -27,6 +27,19 @@ struct Box : Actor
 struct Player : Actor
 {
   Transform*  mpTransform  = nullptr;
+  Renderable* mpRenderable = nullptr;
+  Rigidbody*  mpRigidbody  = nullptr;
+
+  Player(r32v3 const& p)
+  {
+    mpTransform = Attach<Transform>(this, p, r32v3{ 0, 0, 0 }, r32v3{ 10, 10, 10 });
+    mpRenderable = Attach<Renderable>(this, nullptr, nullptr);
+    mpRigidbody = Attach<Rigidbody>(this, r32v3{ 0, 0, 0 }, 0.f);
+  }
+};
+struct Player : Actor
+{
+  Transform*  mpTransform  = nullptr;
   Camera*     mpCamera     = nullptr;
   Renderable* mpRenderable = nullptr;
   Rigidbody*  mpRigidbody  = nullptr;
@@ -46,9 +59,28 @@ struct Demo : Sandbox
   {
     std::cout << "Demo created\n";
 
+    // TODO: test component selects
     Create<Box>("Box0", r32v3{ 0, 0, 0 });
     Create<Box>("Box1", r32v3{ 0, 0, 0 });
-    Create<Player>("Player", r32v3{ 0, 0, -10 });
+    Create<Player>("Player", r32v3{ 0, 0, 0 });
+
+    int i = 0;
+    Dispatch<Transform>([&i](Transform* pTransform)
+      {
+        std::cout << i++ << ":Transform:" << pTransform << std::endl;
+      });
+    Dispatch<Transform, Renderable>([&i](Transform* pTransform, Renderable* pRenderable)
+      {
+        std::cout << i++ << ":Transform:" << pTransform << ":Renderable:" << pRenderable << std::endl;
+      });
+    Dispatch<Transform, Rigidbody>([&i](Transform* pTransform, Rigidbody* pRigidbody)
+      {
+        std::cout << i++ << ":Transform:" << pTransform << ":Rigidbody:" << pRigidbody << std::endl;
+      });
+    Dispatch<Transform, Renderable, Rigidbody>([&i](Transform* pTransform, Renderable* pRenderable, Rigidbody* pRigidbody)
+      {
+        std::cout << i++ << ":Transform:" << pTransform << ":Renderable:" << pRenderable << ":Rigidbody:" << pRigidbody << std::endl;
+      });
 
     int i = 0;
     Dispatch<Transform>([&i](Transform* pTransform)
