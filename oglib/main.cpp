@@ -37,21 +37,6 @@ struct Player : Actor
     mpRigidbody = Attach<Rigidbody>(this, r32v3{ 0, 0, 0 }, 0.f);
   }
 };
-struct Player : Actor
-{
-  Transform*  mpTransform  = nullptr;
-  Camera*     mpCamera     = nullptr;
-  Renderable* mpRenderable = nullptr;
-  Rigidbody*  mpRigidbody  = nullptr;
-
-  Player(r32v3 const& p)
-  {
-    mpTransform = Attach<Transform>(this, p, r32v3{ 0, 0, 0 }, r32v3{ 1, 1, 1 });
-    mpCamera = Attach<Camera>(this, glm::radians(45.f), 0.001f, 1000.f);
-    mpRenderable = Attach<Renderable>(this, nullptr, nullptr);
-    mpRigidbody = Attach<Rigidbody>(this, r32v3{ 0, 0, 0 }, 0.f);
-  }
-};
 
 struct Demo : Sandbox
 {
