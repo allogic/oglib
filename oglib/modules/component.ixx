@@ -14,26 +14,31 @@ export module component;
 * Imports.
 */
 
-import math;
+import type;
 import acs;
 
 /*
 * Components.
 */
 
-// TODO: all components contain ONLY ptr
-
 export struct Transform : Component
 {
   r32v3 mPosition;
-  r32v3 mRotation;
+  r32v3 mRotationEuler;
   r32v3 mScale;
 
-  Transform(r32v3 const& position, r32v3 const& rotation, r32v3 const& scale) : mPosition{ position }, mRotation{ rotation }, mScale{ mScale } {}
-};
+  Transform(r32v3 const& position, r32v3 const& rotationEuler, r32v3 const& scale)
+    : mPosition{ position }
+    , mRotationEuler{ rotationEuler }
+    , mScale{ scale } {}
+}; 
 export struct Camera : Component
 {
-  
+  r32 mFov;
+  r32 mNear;
+  r32 mFar;
+
+  Camera(r32 fov, r32 near, r32 far) : mFov{ fov }, mNear{ near }, mFar{ far } {}
 };
 export struct Renderable : Component
 {

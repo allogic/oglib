@@ -8,6 +8,7 @@ module;
 * Includes.
 */
 
+#include <iostream>
 #include <string>
 #include <cstdio>
 #include <vector>
@@ -15,7 +16,10 @@ module;
 #include <deque>
 #include <type_traits>
 
-#include "glad.h"
+#include <glad.h>
+
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 
 /*
 * Begin module OpenGL renderer.
@@ -27,7 +31,7 @@ export module render;
 * Imports.
 */
 
-import math;
+import type;
 import acs;
 import component;
 
@@ -644,6 +648,14 @@ struct UniformBlockCamera
 };
 #pragma pack(pop)
 
+UniformBlockGlobal                    sUniformBlockGlobal     = {};
+UniformBlockProjection                sUniformBlockProjection = {};
+UniformBlockCamera                    sUniformBlockCamera     = {};
+
+UniformLayout<UniformBlockGlobal>     sUniformGlobal          = {};
+UniformLayout<UniformBlockProjection> sUniformProjection      = {};
+UniformLayout<UniformBlockCamera>     sUniformCamera          = {};
+
 /*
 * Render task layouts.
 */
@@ -659,180 +671,217 @@ struct TaskDeferred
 * Renderer layouts.
 */
 
-export struct DeferredRenderer
+struct DebugRenderer
 {
-  u32                                   mWidth;
-  u32                                   mHeight;
-  std::deque<TaskDeferred>              mRenderQueue;
-  UniformLayout<UniformBlockGlobal>     mUniformGlobal;
-  UniformLayout<UniformBlockProjection> mUniformProjection;
-  UniformLayout<UniformBlockCamera>     mUniformCamera;
-  r32m4                                 mTransformGizmo;
-  MeshGizmo                             mMeshGizmo;
-  ShaderGizmo                           mShaderGizmo;
-  ShaderLambert                         mShaderLambert;
-  ShaderLambertInstanced                mShaderLambertInstanced;
-  u32                                   mVertexOffsetGizmoLineBatch;
-  u32                                   mIndexOffsetGizmoLineBatch;
+  MeshGizmo   mMeshGizmo;
+  ShaderGizmo mShaderGizmo;
+  u32         mVertexOffsetGizmoLineBatch;
+  u32         mIndexOffsetGizmoLineBatch;
+};
+struct DeferredRenderer
+{
+  std::deque<TaskDeferred> mRenderQueue;
+  ShaderLambert            mShaderLambert;
+  ShaderLambertInstanced   mShaderLambertInstanced;
 };
 
-/*
-* Pass routines.
-*/
-
-void PassGeometry(DeferredRenderer& renderer)
-{
-
-}
-void PassGeometryInstanced(DeferredRenderer& renderer)
-{
-
-}
-void PassLight(DeferredRenderer& renderer)
-{
-
-}
-void PassGizmo(DeferredRenderer& renderer)
-{
-
-}
+DebugRenderer    sDebugRenderer    = {};
+DeferredRenderer sDeferredRenderer = {};
 
 /*
-* Dispatch specific routines.
+* Renderer specific routines.
 */
 
-export void DeferredRendererCreate(DeferredRenderer& renderer, u32 width, u32 height)
+void DeferredRendererCreate()
 {
-  UniformLayoutCreate(renderer.mUniformGlobal);
-  UniformLayoutCreate(renderer.mUniformProjection);
-  UniformLayoutCreate(renderer.mUniformCamera);
-  std::vector<u32> gizmoVertexBufferSizes{ 131070 };
-  std::vector<u32> gizmoIndexBufferSizes{ 131070 * 2 };
-  MeshLayoutCreate(renderer.mMeshGizmo, 1, gizmoVertexBufferSizes.data(), gizmoIndexBufferSizes.data());
-  ShaderLayoutCreate(renderer.mShaderGizmo, ShaderPaths
-    {
-      .mVertexSource{ "C:\\Users\\Michael\\Downloads\\oglib\\spirv\\compiled\\gizmo.vert" },
-      .mFragmentSource{ "C:\\Users\\Michael\\Downloads\\oglib\\spirv\\compiled\\gizmo.frag" }
-    });
-  ShaderLayoutCreate(renderer.mShaderLambert, ShaderPaths
+  ShaderLayoutCreate(sDeferredRenderer.mShaderLambert, ShaderPaths
     {
       .mVertexSource{ "C:\\Users\\Michael\\Downloads\\oglib\\spirv\\compiled\\lambert.vert" },
       .mFragmentSource{ "C:\\Users\\Michael\\Downloads\\oglib\\spirv\\compiled\\lambert.frag" }
     });
-  ShaderLayoutCreate(renderer.mShaderLambertInstanced, ShaderPaths
+  ShaderLayoutCreate(sDeferredRenderer.mShaderLambertInstanced, ShaderPaths
     {
       .mVertexSource{ "C:\\Users\\Michael\\Downloads\\oglib\\spirv\\compiled\\lambert_instanced.vert" },
       .mFragmentSource{ "C:\\Users\\Michael\\Downloads\\oglib\\spirv\\compiled\\lambert_instanced.frag" }
     });
 }
-export void DeferredRenderBegin(DeferredRenderer& renderer, r32 time)
+void DeferredRendererDestroy()
 {
-  Dispatch<Transform, Renderable>([&](Transform* pTransform, Renderable* pRenderable)
+  ShaderLayoutDestroy(sDeferredRenderer.mShaderLambert);
+  ShaderLayoutDestroy(sDeferredRenderer.mShaderLambertInstanced);
+}
+void DebugRendererCreate()
+{
+  std::vector<u32> gizmoVertexBufferSizes{ 131070 };
+  std::vector<u32> gizmoIndexBufferSizes{ 131070 * 2 };
+  MeshLayoutCreate(sDebugRenderer.mMeshGizmo, 1, gizmoVertexBufferSizes.data(), gizmoIndexBufferSizes.data());
+  ShaderLayoutCreate(sDebugRenderer.mShaderGizmo, ShaderPaths
     {
-      renderer.mRenderQueue.push_front(TaskDeferred{ pTransform, (MeshLambert*)pRenderable->mpMeshLayout, (ShaderLambert*)pRenderable->mpShaderLayout });
+      .mVertexSource{ "C:\\Users\\Michael\\Downloads\\oglib\\spirv\\compiled\\gizmo.vert" },
+      .mFragmentSource{ "C:\\Users\\Michael\\Downloads\\oglib\\spirv\\compiled\\gizmo.frag" }
     });
-  UniformBlockGlobal uniformBlockGlobal = { time, r32v2{ (r32)renderer.mWidth, (r32)renderer.mHeight } };
-  UniformBlockProjection uniformBlockProjection = { r32m4{}, r32m4{}, r32m4{} };
-  UniformBlockCamera uniformBlockCamera = { r32v3{} };
-  UniformLayoutBind(renderer.mUniformGlobal);
-  UniformLayoutData(renderer.mUniformGlobal, 1, &uniformBlockGlobal);
-  UniformLayoutBind(renderer.mUniformProjection);
-  UniformLayoutData(renderer.mUniformProjection, 1, &uniformBlockProjection);
-  UniformLayoutBind(renderer.mUniformCamera);
-  UniformLayoutData(renderer.mUniformCamera, 1, &uniformBlockCamera);
-  UniformLayoutUnBind();
-  MeshLayoutBind(renderer.mMeshGizmo, 0);
-  MeshLayoutClear(renderer.mMeshGizmo, 0);
-  MeshLayoutUnBind();
 }
-export void DeferredRender(DeferredRenderer& renderer)
+void DebugRendererDestroy()
 {
-  glClearColor(0.f, 0.f, 0.f, 1.f);
-  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-  // Geometry pass
-  //glBindFramebuffer(GL_DRAW_FRAMEBUFFER, renderer.mFrameBufferDeferred.mFbo);
-  //glClearColor(1.f, 0.f, 0.f, 1.f);
-  //glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-  //glEnable(GL_DEPTH_TEST);
-  //glEnable(GL_BLEND);
-  //glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-  //RenderPassGeometry(renderer);
-  //RenderPassGeometryInstanced(renderer);
-  //glDisable(GL_BLEND);
-  //glDisable(GL_DEPTH_TEST);
-  //glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-  // Light pass
-  //glBindFramebuffer(GL_READ_FRAMEBUFFER, renderer.mFrameBufferDeferred.mFbo);
-  //RenderPassLight(renderer);
-  //glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-  // Copy geometry depth into default framebuffer
-  //glBindFramebuffer(GL_READ_FRAMEBUFFER, renderer.mFrameBufferDeferred.mFbo);
-  //glBlitFramebuffer(0, 0, renderer.mWidth, renderer.mHeight, 0, 0, renderer.mWidth, renderer.mHeight, GL_DEPTH_BUFFER_BIT, GL_NEAREST);
-  //glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-  // Gizmo pass
-  glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
-  glEnable(GL_DEPTH_TEST);
-  PassGizmo(renderer);
-  glDisable(GL_DEPTH_TEST);
-  glBindFramebuffer(GL_FRAMEBUFFER, 0);
-}
-export void DeferredRenderEnd(DeferredRenderer& renderer)
-{
-  MeshLayoutUnBind();
-  ShaderLayoutUnBind();
-  UniformLayoutUnBind();
-  BufferLayoutUnBind();
-  renderer.mVertexOffsetGizmoLineBatch = 0;
-  renderer.mIndexOffsetGizmoLineBatch = 0;
-}
-export void DeferredRendererDestroy(DeferredRenderer const& renderer)
-{
-  UniformLayoutDestroy(renderer.mUniformGlobal);
-  UniformLayoutDestroy(renderer.mUniformProjection);
-  UniformLayoutDestroy(renderer.mUniformCamera);
-  MeshLayoutDestroy(renderer.mMeshGizmo);
-  ShaderLayoutDestroy(renderer.mShaderGizmo);
-  ShaderLayoutDestroy(renderer.mShaderLambert);
-  ShaderLayoutDestroy(renderer.mShaderLambertInstanced);
+  MeshLayoutDestroy(sDebugRenderer.mMeshGizmo);
+  ShaderLayoutDestroy(sDebugRenderer.mShaderGizmo);
 }
 
 /*
-* Gizmo drawing routines.
+* Deferred specific routines.
 */
 
-export void GizmoPushMatrix(DeferredRenderer& renderer, r32m4 const& transform)
+export void DeferredRenderBegin()
 {
-  renderer.mTransformGizmo = transform;
+  Dispatch<Transform, Renderable>([&](Transform* pTransform, Renderable* pRenderable)
+    {
+      sDeferredRenderer.mRenderQueue.push_front(TaskDeferred{ pTransform, (MeshLambert*)pRenderable->mpMeshLayout, (ShaderLambert*)pRenderable->mpShaderLayout });
+    });
 }
-export void GizmoPopMatrix(DeferredRenderer& renderer)
+export void DeferredRender()
 {
-  renderer.mTransformGizmo = Identity<r32, 4>();
+  // Deferred pass
+  while (!sDeferredRenderer.mRenderQueue.empty())
+  {
+    TaskDeferred& task = sDeferredRenderer.mRenderQueue.front();
+
+    glClearColor(0.f, 0.f, 0.f, 1.f);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    // Geometry pass
+    //glBindFramebuffer(GL_DRAW_FRAMEBUFFER, renderer.mFrameBufferDeferred.mFbo);
+    //glClearColor(1.f, 0.f, 0.f, 1.f);
+    //glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    //glEnable(GL_DEPTH_TEST);
+    //glEnable(GL_BLEND);
+    //glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    //RenderPassGeometry(renderer);
+    //RenderPassGeometryInstanced(renderer);
+    //glDisable(GL_BLEND);
+    //glDisable(GL_DEPTH_TEST);
+    //glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+    // Light pass
+    //glBindFramebuffer(GL_READ_FRAMEBUFFER, renderer.mFrameBufferDeferred.mFbo);
+    //RenderPassLight(renderer);
+    //glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+    // Copy geometry depth into default framebuffer
+    //glBindFramebuffer(GL_READ_FRAMEBUFFER, renderer.mFrameBufferDeferred.mFbo);
+    //glBlitFramebuffer(0, 0, renderer.mWidth, renderer.mHeight, 0, 0, renderer.mWidth, renderer.mHeight, GL_DEPTH_BUFFER_BIT, GL_NEAREST);
+    //glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+    sDeferredRenderer.mRenderQueue.pop_front();
+  }
 }
-export void GizmoPushLine(DeferredRenderer& renderer, r32v3 const& p0, r32v3 const& p1, r32v4 const& color)
+export void DeferredRenderEnd()
 {
-  //r32v3 v0 = renderer.mTransformGizmo * r32v4{ p0, 1.f };
-  //r32v3 v1 = renderer.mTransformGizmo * r32v4{ p1, 1.f };
-  //VertexGizmo vertices[2]{ { v0, color }, { v1, color } };
-  //u32 indices[2]{ renderer.mVertexOffsetGizmoLineBatch + 0, renderer.mVertexOffsetGizmoLineBatch + 1 };
-  //MeshLayoutDataSub(renderer.mMeshGizmoLineBatch, 0, vertices, indices, renderer.mVertexOffsetGizmoLineBatch, renderer.mIndexOffsetGizmoLineBatch, 2, 2);
-  //renderer.mVertexOffsetGizmoLineBatch += 2;
-  //renderer.mIndexOffsetGizmoLineBatch += 2;
+  MeshLayoutUnBind();
+  ShaderLayoutUnBind();
 }
-export void GizmoPushBox(DeferredRenderer& renderer, r32v3 const& position, r32v3 const& size, r32v4 const& color)
+
+/*
+* Debug specific routines.
+*/
+
+export void DebugRenderBegin()
 {
-  /*
-  r32v3 blf = renderer.mTransformGizmo * r32v4{ -size.x, -size.y, -size.z, 1.f };
-  r32v3 brf = renderer.mTransformGizmo * r32v4{ size.x, -size.y, -size.z, 1.f };
-  r32v3 tlf = renderer.mTransformGizmo * r32v4{ -size.x,  size.y, -size.z, 1.f };
-  r32v3 trf = renderer.mTransformGizmo * r32v4{ size.x,  size.y, -size.z, 1.f };
-  r32v3 blb = renderer.mTransformGizmo * r32v4{ -size.x, -size.y,  size.z, 1.f };
-  r32v3 brb = renderer.mTransformGizmo * r32v4{ size.x, -size.y,  size.z, 1.f };
-  r32v3 tlb = renderer.mTransformGizmo * r32v4{ -size.x,  size.y,  size.z, 1.f };
-  r32v3 trb = renderer.mTransformGizmo * r32v4{ size.x,  size.y,  size.z, 1.f };
+  MeshLayoutBind(sDebugRenderer.mMeshGizmo, 0);
+  MeshLayoutClear(sDebugRenderer.mMeshGizmo, 0);
+}
+export void DebugRender()
+{
+  glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+  glEnable(GL_DEPTH_TEST);
+  ShaderLayoutBind(sDebugRenderer.mShaderGizmo);
+  MeshLayoutRenderPartial(sDebugRenderer.mMeshGizmo, 0, RENDER_MODE_LINE);
+  glDisable(GL_DEPTH_TEST);
+  glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}
+export void DebugRenderEnd()
+{
+  MeshLayoutUnBind();
+  ShaderLayoutUnBind();
+  sDebugRenderer.mVertexOffsetGizmoLineBatch = 0;
+  sDebugRenderer.mIndexOffsetGizmoLineBatch = 0;
+}
+
+/*
+* Global render routines.
+*/
+
+// TODO: refactor *End() routines - don't need them anymore
+
+export void CreateRenderer()
+{
+  // Create global UBO's
+  UniformLayoutCreate(sUniformGlobal);
+  UniformLayoutCreate(sUniformProjection);
+  UniformLayoutCreate(sUniformCamera);
+  // Create renderer
+  DebugRendererCreate();
+  DeferredRendererCreate();
+}
+export void RenderBegin(u32 width, u32 height, r32 time)
+{
+  // Update global UBO's
+  sUniformBlockGlobal = { time, r32v2{ width, height } };
+  Dispatch<Transform, Camera>([&](Transform* pTransform, Camera* pCamera)
+    {
+      r32m4 rotation = glm::identity<r32m4>();
+      rotation = glm::rotate(rotation, pTransform->mRotationEuler.x, r32v3{ 1, 0, 0 });
+      rotation = glm::rotate(rotation, pTransform->mRotationEuler.y, r32v3{ 0, 1, 0 });
+      rotation = glm::rotate(rotation, pTransform->mRotationEuler.z, r32v3{ 0, 0, 1 });
+      r32v3 const localForward = rotation * r32v4{ 0, 0, 1, 1 };
+      r32v3 const localUp = rotation * r32v4{ 0, 1, 0, 1 };
+      sUniformBlockProjection.mProjection = glm::perspective(pCamera->mFov, (r32)width / height, pCamera->mNear, pCamera->mFar);
+      sUniformBlockProjection.mView = glm::lookAt(pTransform->mPosition, pTransform->mPosition + localForward, localUp);
+      sUniformBlockCamera.mPosition = pTransform->mPosition;
+    });
+  UniformLayoutBind(sUniformGlobal);
+  UniformLayoutData(sUniformGlobal, 1, &sUniformBlockGlobal);
+  UniformLayoutMap(sUniformGlobal, 0);
+  UniformLayoutBind(sUniformProjection);
+  UniformLayoutData(sUniformProjection, 1, &sUniformBlockProjection);
+  UniformLayoutMap(sUniformProjection, 1);
+  UniformLayoutBind(sUniformCamera);
+  UniformLayoutData(sUniformCamera, 1, &sUniformBlockCamera);
+  UniformLayoutMap(sUniformCamera, 2);
+  UniformLayoutUnBind();
+}
+export void RenderEnd()
+{
+  UniformLayoutUnBind();
+}
+export void DestroyRenderer()
+{
+  // Destroy renderer
+  DebugRendererDestroy();
+  DeferredRendererDestroy();
+  // Destroy global UBO's
+  UniformLayoutDestroy(sUniformGlobal);
+  UniformLayoutDestroy(sUniformProjection);
+  UniformLayoutDestroy(sUniformCamera);
+}
+
+export void DebugRenderLine(r32v3 const& p0, r32v3 const& p1, r32v4 const& color, r32m4 const& transform)
+{
+  VertexGizmo vertices[2]{ { p0, color }, { p1, color } };
+  u32 indices[2]{ sDebugRenderer.mVertexOffsetGizmoLineBatch + 0, sDebugRenderer.mVertexOffsetGizmoLineBatch + 1 };
+  MeshLayoutData(sDebugRenderer.mMeshGizmo, 0, vertices, indices, sDebugRenderer.mVertexOffsetGizmoLineBatch, sDebugRenderer.mIndexOffsetGizmoLineBatch, 2, 2);
+  sDebugRenderer.mVertexOffsetGizmoLineBatch += 2;
+  sDebugRenderer.mIndexOffsetGizmoLineBatch += 2;
+}
+export void DebugRenderBox(r32v3 const& position, r32v3 const& size, r32v4 const& color, r32m4 const& transform)
+{
+  r32v3 blf = r32v3{ -size.x, -size.y, -size.z };
+  r32v3 brf = r32v3{  size.x, -size.y, -size.z };
+  r32v3 tlf = r32v3{ -size.x,  size.y, -size.z };
+  r32v3 trf = r32v3{  size.x,  size.y, -size.z };
+  r32v3 blb = r32v3{ -size.x, -size.y,  size.z };
+  r32v3 brb = r32v3{  size.x, -size.y,  size.z };
+  r32v3 tlb = r32v3{ -size.x,  size.y,  size.z };
+  r32v3 trb = r32v3{  size.x,  size.y,  size.z };
   VertexGizmo vertices[8]
   {
     // front
@@ -850,35 +899,34 @@ export void GizmoPushBox(DeferredRenderer& renderer, r32v3 const& position, r32v
   u32 indices[24]
   {
     // Front
-    renderer.mVertexOffsetGizmoLineBatch + 0,
-    renderer.mVertexOffsetGizmoLineBatch + 1,
-    renderer.mVertexOffsetGizmoLineBatch + 0,
-    renderer.mVertexOffsetGizmoLineBatch + 2,
-    renderer.mVertexOffsetGizmoLineBatch + 2,
-    renderer.mVertexOffsetGizmoLineBatch + 3,
-    renderer.mVertexOffsetGizmoLineBatch + 3,
-    renderer.mVertexOffsetGizmoLineBatch + 1,
+    sDebugRenderer.mVertexOffsetGizmoLineBatch + 0,
+    sDebugRenderer.mVertexOffsetGizmoLineBatch + 1,
+    sDebugRenderer.mVertexOffsetGizmoLineBatch + 0,
+    sDebugRenderer.mVertexOffsetGizmoLineBatch + 2,
+    sDebugRenderer.mVertexOffsetGizmoLineBatch + 2,
+    sDebugRenderer.mVertexOffsetGizmoLineBatch + 3,
+    sDebugRenderer.mVertexOffsetGizmoLineBatch + 3,
+    sDebugRenderer.mVertexOffsetGizmoLineBatch + 1,
     // Back
-    renderer.mVertexOffsetGizmoLineBatch + 4,
-    renderer.mVertexOffsetGizmoLineBatch + 5,
-    renderer.mVertexOffsetGizmoLineBatch + 4,
-    renderer.mVertexOffsetGizmoLineBatch + 6,
-    renderer.mVertexOffsetGizmoLineBatch + 6,
-    renderer.mVertexOffsetGizmoLineBatch + 7,
-    renderer.mVertexOffsetGizmoLineBatch + 7,
-    renderer.mVertexOffsetGizmoLineBatch + 5,
+    sDebugRenderer.mVertexOffsetGizmoLineBatch + 4,
+    sDebugRenderer.mVertexOffsetGizmoLineBatch + 5,
+    sDebugRenderer.mVertexOffsetGizmoLineBatch + 4,
+    sDebugRenderer.mVertexOffsetGizmoLineBatch + 6,
+    sDebugRenderer.mVertexOffsetGizmoLineBatch + 6,
+    sDebugRenderer.mVertexOffsetGizmoLineBatch + 7,
+    sDebugRenderer.mVertexOffsetGizmoLineBatch + 7,
+    sDebugRenderer.mVertexOffsetGizmoLineBatch + 5,
     // Connections
-    renderer.mVertexOffsetGizmoLineBatch + 0,
-    renderer.mVertexOffsetGizmoLineBatch + 4,
-    renderer.mVertexOffsetGizmoLineBatch + 1,
-    renderer.mVertexOffsetGizmoLineBatch + 5,
-    renderer.mVertexOffsetGizmoLineBatch + 2,
-    renderer.mVertexOffsetGizmoLineBatch + 6,
-    renderer.mVertexOffsetGizmoLineBatch + 3,
-    renderer.mVertexOffsetGizmoLineBatch + 7,
+    sDebugRenderer.mVertexOffsetGizmoLineBatch + 0,
+    sDebugRenderer.mVertexOffsetGizmoLineBatch + 4,
+    sDebugRenderer.mVertexOffsetGizmoLineBatch + 1,
+    sDebugRenderer.mVertexOffsetGizmoLineBatch + 5,
+    sDebugRenderer.mVertexOffsetGizmoLineBatch + 2,
+    sDebugRenderer.mVertexOffsetGizmoLineBatch + 6,
+    sDebugRenderer.mVertexOffsetGizmoLineBatch + 3,
+    sDebugRenderer.mVertexOffsetGizmoLineBatch + 7,
   };
-  MeshLayoutDataSub(renderer.mMeshGizmoLineBatch, 0, vertices, indices, renderer.mVertexOffsetGizmoLineBatch, renderer.mIndexOffsetGizmoLineBatch, 8, 24);
-  renderer.mVertexOffsetGizmoLineBatch += 8;
-  renderer.mIndexOffsetGizmoLineBatch += 24;
-  */
+  MeshLayoutData(sDebugRenderer.mMeshGizmo, 0, vertices, indices, sDebugRenderer.mVertexOffsetGizmoLineBatch, sDebugRenderer.mIndexOffsetGizmoLineBatch, 8, 24);
+  sDebugRenderer.mVertexOffsetGizmoLineBatch += 8;
+  sDebugRenderer.mIndexOffsetGizmoLineBatch += 24;
 }

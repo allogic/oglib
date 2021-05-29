@@ -10,8 +10,8 @@ module;
 
 #include <string>
 
-#include "glad.h"
-#include "glfw3.h"
+#include <glad.h>
+#include <glfw3.h>
 
 /*
 * Begin module GLFW.
@@ -23,7 +23,7 @@ export module glfw;
 * Imports.
 */
 
-import math;
+import type;
 import acs;
 import render;
 
@@ -46,8 +46,9 @@ concept Sandboxable = std::is_base_of_v<Sandbox, T>;
 
 export struct Sandbox
 {
-  virtual void OnUpdate(r32 time) = 0;
-  virtual void OnPhysic(r32 time) = 0;
+  virtual void OnUpdate(r32 time) {};
+  virtual void OnPhysic(r32 time) {};
+  virtual void OnDebug(r32 time) const {};
 };
 
 /*
@@ -94,8 +95,8 @@ __forceinline s32 Start(u32 width, u32 height, u32 major, u32 minor, std::string
   r32 time = 0.f;
   r32 timePrev = 0.f;
   r32 timeDelta = 0.f;
-  r32 timeRender = 1.f / fps;
-  r32 timeRenderPrev = 0.f;
+  r32 timeFixed = 1.f / fps;
+  r32 timeFixedPrev = 0.f;
   Sandbox* pSandbox = new S;
   if (!pSandbox)
   {
@@ -103,26 +104,31 @@ __forceinline s32 Start(u32 width, u32 height, u32 major, u32 minor, std::string
     glfwTerminate();
     return -1;
   }
-  DeferredRenderer renderer;
-  DeferredRendererCreate(renderer, width, height);
+  CreateRenderer();
   while (running)
   {
     glfwPollEvents();
     time = (r32)glfwGetTime();
     timeDelta = time - timePrev;
     pSandbox->OnUpdate(time);
-    if ((time - timeRenderPrev) >= timeRender)
+    if ((time - timeFixedPrev) >= timeFixed)
     {
       pSandbox->OnPhysic(time);
-      DeferredRenderBegin(renderer, time);
-      DeferredRender(renderer);
-      DeferredRenderEnd(renderer);
+      RenderBegin(width, height, time);
+      DeferredRenderBegin();
+      DeferredRender();
+      DeferredRenderEnd();
+      DebugRenderBegin();
+      pSandbox->OnDebug(time);
+      DebugRender();
+      DebugRenderEnd();
+      RenderEnd();
       glfwSwapBuffers(pWindow);
-      timeRenderPrev = time;
+      timeFixedPrev = time;
     }
     timePrev = time;
   }
-  DeferredRendererDestroy(renderer);
+  DestroyRenderer();
   delete pSandbox;
   glfwDestroyWindow(pWindow);
   glfwTerminate();

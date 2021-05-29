@@ -4,7 +4,7 @@
 * Uniform layouts.
 */
 
-layout (binding = 0) uniform ProjectionUniform
+layout (binding = 1) uniform ProjectionUniform
 {
   mat4 uProjection;
   mat4 uView;
