@@ -20,13 +20,10 @@ module;
 * Includes.
 */
 
-#include <iostream>
-#include <bitset>
 #include <string>
 #include <array>
 #include <map>
 #include <set>
-#include <unordered_map>
 #include <type_traits>
 #include <functional>
 
@@ -46,7 +43,7 @@ import type;
 * Global parameters.
 */
 
-constexpr u32 MAX_ACTORS = 100000;
+constexpr u32 MAX_ACTORS{ 100000 };
 
 /*
 * Forward decls.
@@ -69,7 +66,7 @@ struct Proxy
 };
 
 template<typename T>
-concept Actorable = std::is_base_of_v<Actor, T>;
+concept Actorable     = std::is_base_of_v<Actor, T>;
 template<typename T>
 concept Componentable = std::is_base_of_v<Component, T>;
 
@@ -87,8 +84,8 @@ using Transactions = std::map<u64, std::multiset<Actor*>>;
 
 export struct Actor
 {
-  u64         mComponentMask  = 0;
-  Components* mpComponents    = nullptr;
+  u64         mComponentMask{};
+  Components* mpComponents  {};
 };
 export struct Component
 {
@@ -96,11 +93,11 @@ export struct Component
 };
 
 /*
-* Global state registry.
+* Global state.
 */
 
-Actors       sActors       = {};
-Transactions sTransactions = {};
+Actors       sActors      {};
+Transactions sTransactions{};
 
 /*
 * Actor specific routines.
@@ -109,7 +106,7 @@ Transactions sTransactions = {};
 export template<Actorable A, typename ... Args>
 __forceinline A* Create(std::string const& name, Args&& ... args) noexcept
 {
-  auto& pActor = sActors[name];
+  auto& pActor{ sActors[name] };
   if (!pActor)
   {
     pActor = new A{ std::forward<Args>(args) ... };
@@ -138,7 +135,7 @@ __forceinline C* Attach(Actor* pActor, Args&& ... args) noexcept
   {
     pActor->mpComponents = new Components;
   }
-  auto& pComponent = (*pActor->mpComponents)[typeid(C).hash_code()];
+  auto& pComponent{ (*pActor->mpComponents)[typeid(C).hash_code()] };
   if (!pComponent)
   {
     pComponent = new C{ std::forward<Args>(args) ... };
@@ -161,7 +158,7 @@ __forceinline C* Detach() noexcept
 export template<Componentable ... Cs>
 __forceinline void Dispatch(std::function<void(typename Proxy<Cs>::Ptr ...)>&& predicate) noexcept
 {
-  u64 const componentHash = ((u64)0u | ... | ~typeid(Cs).hash_code());
+  u64 const componentHash{ ((u64)0u | ... | ~typeid(Cs).hash_code()) };
   for (auto const& pActor : sTransactions[componentHash])
   {
     predicate(((typename Proxy<Cs>::Ptr)(*pActor->mpComponents)[typeid(Cs).hash_code()]) ...);

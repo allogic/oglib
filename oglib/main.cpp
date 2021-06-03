@@ -1,17 +1,12 @@
 #include <iostream>
 #include <string>
 
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-
 import type;
 import glfw;
 import acs;
 import component;
 import render;
-
-u32 Width  = 720;
-u32 Height = 360;
+import registry;
 
 struct Box : Actor
 {
@@ -42,34 +37,12 @@ struct Demo : Sandbox
 {
   Demo()
   {
-    std::cout << "Demo created\n";
-
-    // TODO: test component selects
-    Create<Box>("Box0", r32v3{ 0, 0, 0 });
-    Create<Box>("Box1", r32v3{ 0, 0, 0 });
-    Create<Player>("Player", r32v3{ 0, 0, -10 });
-
-    int i = 0;
-    Dispatch<Transform>([&i](Transform* pTransform)
-      {
-        std::cout << i++ << ":Transform:" << pTransform << std::endl;
-      });
-    Dispatch<Transform, Renderable>([&i](Transform* pTransform, Renderable* pRenderable)
-      {
-        std::cout << i++ << ":Transform:" << pTransform << ":Renderable:" << pRenderable << std::endl;
-      });
-    Dispatch<Transform, Rigidbody>([&i](Transform* pTransform, Rigidbody* pRigidbody)
-      {
-        std::cout << i++ << ":Transform:" << pTransform << ":Rigidbody:" << pRigidbody << std::endl;
-      });
-    Dispatch<Transform, Renderable, Rigidbody>([&i](Transform* pTransform, Renderable* pRenderable, Rigidbody* pRigidbody)
-      {
-        std::cout << i++ << ":Transform:" << pTransform << ":Renderable:" << pRenderable << ":Rigidbody:" << pRigidbody << std::endl;
-      });
+    //At<ShaderLambert>("shaderBox", { ... }, { ... });
+    //At<MeshLambert>("meshBox", { ... }, { ... });
   }
   virtual ~Demo()
   {
-    std::cout << "Demo destroyed\n";
+
   }
 
   void OnUpdate(r32 time) override
@@ -83,13 +56,13 @@ struct Demo : Sandbox
   void OnDebug(r32 time) const override
   {
     // TODO: test gizmo rendering & queues
-    DebugRenderLine(r32v3{ 0, 0, 0 }, r32v3{ 10, 0, 0 }, r32v4{ 1, 0, 0, 1 }, glm::identity<r32m4>());
-    DebugRenderLine(r32v3{ 0, 0, 0 }, r32v3{ 0, 10, 0 }, r32v4{ 0, 1, 0, 1 }, glm::identity<r32m4>());
-    DebugRenderLine(r32v3{ 0, 0, 0 }, r32v3{ 0, 0, 10 }, r32v4{ 0, 0, 1, 1 }, glm::identity<r32m4>());
+    //DebugRenderLine(r32v3{ 0, 0, 0 }, r32v3{ 10, 0, 0 }, r32v4{ 1, 0, 0, 1 }, glm::identity<r32m4>());
+    //DebugRenderLine(r32v3{ 0, 0, 0 }, r32v3{ 0, 10, 0 }, r32v4{ 0, 1, 0, 1 }, glm::identity<r32m4>());
+    //DebugRenderLine(r32v3{ 0, 0, 0 }, r32v3{ 0, 0, 10 }, r32v4{ 0, 0, 1, 1 }, glm::identity<r32m4>());
   }
 };
 
 int main()
 {
-  return Start<Demo>(1280, 720, 4, 6, "Sandbox");
+  return Start<Demo>(1280, 720, "Sandbox", 60, 1);
 }

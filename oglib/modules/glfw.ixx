@@ -9,9 +9,11 @@ module;
 */
 
 #include <string>
+#include <vector>
 
-#include <glad.h>
 #include <glfw3.h>
+
+#include <vulkan/vulkan.h>
 
 /*
 * Begin module GLFW.
@@ -56,55 +58,50 @@ export struct Sandbox
 */
 
 export template<Sandboxable S>
-__forceinline s32 Start(u32 width, u32 height, u32 major, u32 minor, std::string const& title, u32 fps = 60) noexcept
+__forceinline s32 Start(u32 width, u32 height, std::string const& title, u32 fps = 60, u32 debug = 0) noexcept
 {
+  // Initialize GLFW
   glfwInit();
-  glfwWindowHint(GLFW_RESIZABLE, GL_TRUE);
-  glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, major);
-  glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, minor);
-  glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-  glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
-  glfwWindowHint(GLFW_VISIBLE, GL_TRUE);
-  glfwWindowHint(GLFW_DECORATED, GL_TRUE);
-  glfwWindowHint(GLFW_FOCUSED, GL_TRUE);
+  glfwWindowHint(GLFW_RESIZABLE, 1);
+  glfwWindowHint(GLFW_VISIBLE, 1);
+  glfwWindowHint(GLFW_DECORATED, 1);
+  glfwWindowHint(GLFW_FOCUSED, 1);
   glfwWindowHint(GLFW_SAMPLES, 0);
-  GLFWwindow* pWindow = glfwCreateWindow((s32)width, (s32)height, title.c_str(), nullptr, nullptr);
+  glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+  GLFWwindow* pWindow{ glfwCreateWindow((s32)width, (s32)height, title.c_str(), nullptr, nullptr) };
   if (!pWindow)
   {
     return -1;
   }
   glfwMakeContextCurrent(pWindow);
-  if (!gladLoadGL())
-  {
-    glfwDestroyWindow(pWindow);
-    glfwTerminate();
-    return -1;
-  }
-  glDebugMessageCallback([](u32 source, u32 type, u32 id, u32 severity, s32 length, s8 const* msg, void const* userParam)
-    {
-      switch (severity)
-      {
-        case GL_DEBUG_SEVERITY_NOTIFICATION:                                                                   break;
-        case GL_DEBUG_SEVERITY_LOW:          std::printf("Severity:Low Type:0x%x Message:%s\n", type, msg);    break;
-        case GL_DEBUG_SEVERITY_MEDIUM:       std::printf("Severity:Medium Type:0x%x Message:%s\n", type, msg); break;
-        case GL_DEBUG_SEVERITY_HIGH:         std::printf("Severity:High Type:0x%x Message:%s\n", type, msg);   break;
-      }
-    }, 0);
   glfwSwapInterval(0);
-  u32 running = 1;
-  r32 time = 0.f;
-  r32 timePrev = 0.f;
-  r32 timeDelta = 0.f;
-  r32 timeFixed = 1.f / fps;
-  r32 timeFixedPrev = 0.f;
-  Sandbox* pSandbox = new S;
+  // Gather instance extensions
+  u32 glfwExtensionSize{};
+  s8 const** ppGlfwExtensions{ glfwGetRequiredInstanceExtensions(&glfwExtensionSize) };
+  std::vector<s8 const*> glfwExtensions{};
+  for (u32 i{}; i < glfwExtensionSize; ++i)
+  {
+    glfwExtensions.emplace_back(ppGlfwExtensions[i]);
+  }
+  if (debug)
+  {
+    glfwExtensions.emplace_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
+  }
+  // Engine core
+  u32 running{ 1 };
+  r32 time{};
+  r32 timePrev{};
+  r32 timeDelta{};
+  r32 timeFixed{ 1.f / fps };
+  r32 timeFixedPrev{};
+  Sandbox* pSandbox{ new S };
   if (!pSandbox)
   {
     glfwDestroyWindow(pWindow);
     glfwTerminate();
     return -1;
   }
-  CreateRenderer();
+  CreateRenderer(pWindow, glfwExtensions, debug);
   while (running)
   {
     glfwPollEvents();
@@ -114,15 +111,15 @@ __forceinline s32 Start(u32 width, u32 height, u32 major, u32 minor, std::string
     if ((time - timeFixedPrev) >= timeFixed)
     {
       pSandbox->OnPhysic(time);
-      RenderBegin(width, height, time);
-      DeferredRenderBegin();
-      DeferredRender();
-      DeferredRenderEnd();
-      DebugRenderBegin();
-      pSandbox->OnDebug(time);
-      DebugRender();
-      DebugRenderEnd();
-      RenderEnd();
+      //RenderBegin(width, height, time);
+      //DeferredRenderBegin();
+      //DeferredRender();
+      //DeferredRenderEnd();
+      //DebugRenderBegin();
+      //pSandbox->OnDebug(time);
+      //DebugRender();
+      //DebugRenderEnd();
+      //RenderEnd();
       glfwSwapBuffers(pWindow);
       timeFixedPrev = time;
     }
