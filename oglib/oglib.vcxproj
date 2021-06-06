@@ -149,12 +149,8 @@
   <ItemGroup>
     <ClCompile Include="external\glm\detail\glm.cpp" />
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="modules\acs.ixx" />
-    <ClCompile Include="modules\component.ixx" />
-    <ClCompile Include="modules\glfw.ixx" />
-    <ClCompile Include="modules\registry.ixx" />
-    <ClCompile Include="modules\type.ixx" />
-    <ClCompile Include="modules\render.ixx" />
+    <ClCompile Include="thicc\VkMesh.cpp" />
+    <ClCompile Include="thicc\VkRenderer.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="external\glfw3.h" />
@@ -445,6 +441,18 @@
     <ClInclude Include="external\glm\vec3.hpp" />
     <ClInclude Include="external\glm\vec4.hpp" />
     <ClInclude Include="external\glm\vector_relational.hpp" />
+    <ClInclude Include="thicc\VkAcs.h" />
+    <ClInclude Include="thicc\VkApi.h" />
+    <ClInclude Include="thicc\VkComponents.h" />
+    <ClInclude Include="thicc\VkCore.h" />
+    <ClInclude Include="thicc\VkMesh.h" />
+    <ClInclude Include="thicc\VkRegistry.h" />
+    <ClInclude Include="thicc\VkRenderer.h" />
+    <ClInclude Include="thicc\VkTypes.h" />
+    <ClInclude Include="thicc\VkUniforms.h" />
+    <ClInclude Include="thicc\VkUtils.h" />
+    <ClInclude Include="thicc\VkVertices.h" />
+    <ClInclude Include="thicc\VkWindow.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="external\glm\detail\func_common.inl" />

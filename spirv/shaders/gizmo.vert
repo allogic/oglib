@@ -8,7 +8,7 @@ layout (binding = 1) uniform ProjectionUniform
 {
   mat4 uProjection;
   mat4 uView;
-  mat4 uTransform;
+  mat4 uModel;
 };
 
 /*
@@ -34,5 +34,5 @@ layout (location = 0) out VertOut
 void main()
 {
   vertOut.color = iColor;
-  gl_Position = uProjection * uView * uTransform * vec4(iPosition, 1.f);
+  gl_Position = uProjection * uView * uModel * vec4(iPosition, 1.f);
 }

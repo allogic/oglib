@@ -1,36 +1,28 @@
-#include <iostream>
-#include <string>
+#include "thicc/VkApi.h"
 
-import type;
-import glfw;
-import acs;
-import component;
-import render;
-import registry;
-
-struct Box : Actor
+struct Box : acs::Actor
 {
-  Transform*  mpTransform  = nullptr;
-  Renderable* mpRenderable = nullptr;
-
-  Box(r32v3 const& p)
-  {
-    mpTransform = Attach<Transform>(this, p, r32v3{ 0, 0, 0 }, r32v3{ 10, 10, 10 });
-    mpRenderable = Attach<Renderable>(this, nullptr, nullptr);
-  }
+  //Transform*  mpTransform  = nullptr;
+  //Renderable* mpRenderable = nullptr;
+  //
+  //Box(r32v3 const& p)
+  //{
+  //  mpTransform = Attach<Transform>(this, p, r32v3{ 0, 0, 0 }, r32v3{ 10, 10, 10 });
+  //  mpRenderable = Attach<Renderable>(this, nullptr, nullptr);
+  //}
 };
-struct Player : Actor
+struct Player : acs::Actor
 {
-  Transform*  mpTransform  = nullptr;
-  Renderable* mpRenderable = nullptr;
-  Rigidbody*  mpRigidbody  = nullptr;
-
-  Player(r32v3 const& p)
-  {
-    mpTransform = Attach<Transform>(this, p, r32v3{ 0, 0, 0 }, r32v3{ 10, 10, 10 });
-    mpRenderable = Attach<Renderable>(this, nullptr, nullptr);
-    mpRigidbody = Attach<Rigidbody>(this, r32v3{ 0, 0, 0 }, 0.f);
-  }
+  //Transform*  mpTransform  = nullptr;
+  //Renderable* mpRenderable = nullptr;
+  //Rigidbody*  mpRigidbody  = nullptr;
+  //
+  //Player(r32v3 const& p)
+  //{
+  //  mpTransform = Attach<Transform>(this, p, r32v3{ 0, 0, 0 }, r32v3{ 10, 10, 10 });
+  //  mpRenderable = Attach<Renderable>(this, nullptr, nullptr);
+  //  mpRigidbody = Attach<Rigidbody>(this, r32v3{ 0, 0, 0 }, 0.f);
+  //}
 };
 
 struct Demo : Sandbox
@@ -64,5 +56,6 @@ struct Demo : Sandbox
 
 int main()
 {
-  return Start<Demo>(1280, 720, "Sandbox", 60, 1);
+  VkWindow<Demo>{ 1280, 720, "Sandbox", 60, 1 };
+  return 0;
 }

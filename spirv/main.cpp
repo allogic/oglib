@@ -5,7 +5,7 @@
 
 int main(int argc, char* argv[])
 {
-  std::string projectDir = argv[1];
+  std::string projectDir{ argv[1] };
 
   std::filesystem::path const projectPath = projectDir;
 
@@ -19,12 +19,12 @@ int main(int argc, char* argv[])
     if (file.is_directory())
       continue;
 
-    std::string const outputDir = projectDir + "compiled";
+    std::string const outputDir{ projectDir + "compiled" };
 
     if (!std::filesystem::exists(outputDir))
       std::filesystem::create_directories(outputDir);
 
-    std::ostringstream oss;
+    std::ostringstream oss{};
 
     oss << "C:\\VulkanSDK\\1.2.176.1\\Bin\\glslangValidator.exe -G100 "
         << file.path().string()
