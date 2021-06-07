@@ -17,8 +17,12 @@
 #include <functional>
 
 #include "VkTypes.h"
-#include "VkUtils.h"
 #include "VkRegistry.h"
+
+//#define VULKAN_HPP_NO_EXCEPTIONS
+//#define VULKAN_HPP_TYPESAFE_CONVERSION
+#define VK_USE_PLATFORM_WIN32_KHR
+//#include <vulkan/vulkan.hpp>
 
 #define GLFW_INCLUDE_VULKAN
 #include <glfw3.h>
@@ -26,6 +30,9 @@
 
 #define _STR(VALUE) #VALUE
 #define STR(VALUE) _STR(VALUE)
+
+#undef min
+#undef max
 
 #define VK_VALIDATE(EXPRESSION)                            \
 if (VkResult result{ EXPRESSION }; result != VK_SUCCESS)   \

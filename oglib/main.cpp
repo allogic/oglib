@@ -1,6 +1,6 @@
 #include "thicc/VkApi.h"
 
-struct Box : acs::Actor
+struct Box : VkAcs::Actor
 {
   //Transform*  mpTransform  = nullptr;
   //Renderable* mpRenderable = nullptr;
@@ -11,7 +11,7 @@ struct Box : acs::Actor
   //  mpRenderable = Attach<Renderable>(this, nullptr, nullptr);
   //}
 };
-struct Player : acs::Actor
+struct Player : VkAcs::Actor
 {
   //Transform*  mpTransform  = nullptr;
   //Renderable* mpRenderable = nullptr;

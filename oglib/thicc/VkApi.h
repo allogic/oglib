@@ -1,6 +1,7 @@
 #ifndef VK_API
 #define VK_API
 
+#include "VkUtils.h"
 #include "VkWindow.h"
 #include "VkVertices.h"
 #include "VkUniforms.h"

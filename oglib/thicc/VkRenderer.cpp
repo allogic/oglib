@@ -33,47 +33,6 @@ u32 VkRenderer::DebugCallback(VkDebugReportFlagsEXT vkFlags, VkDebugReportObject
   }
   return 0;
 }
-std::set<std::string> VkRenderer::GetSupportedLayers()
-{
-  u32 layerCount{};
-  VK_VALIDATE(vkEnumerateInstanceLayerProperties(&layerCount, nullptr));
-  std::vector<VkLayerProperties> vkLayers{ layerCount };
-  VK_VALIDATE(vkEnumerateInstanceLayerProperties(&layerCount, vkLayers.data()));
-  std::set<std::string> vkLayerNames{};
-  for (u32 i{}; i < layerCount; ++i)
-  {
-    vkLayerNames.emplace(vkLayers[i].layerName);
-  }
-  return vkLayerNames;
-}
-std::set<std::string> VkRenderer::GetRequiredExtensions(u32 debugEnabled)
-{
-  u32 extensionCount{};
-  s8 const** ppGlfwExtensions{ glfwGetRequiredInstanceExtensions(&extensionCount) };
-  std::set<std::string> requiredExtensions{};
-  for (u32 i{}; i < extensionCount; ++i)
-  {
-    requiredExtensions.emplace(ppGlfwExtensions[i]);
-  }
-  if (debugEnabled)
-  {
-    requiredExtensions.emplace(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
-  }
-  return requiredExtensions;
-}
-std::set<std::string> VkRenderer::GetSupportedExtensions(VkPhysicalDevice vkPhysicalDevice)
-{
-  u32 extensionCount{};
-  VK_VALIDATE(vkEnumerateDeviceExtensionProperties(vkPhysicalDevice, nullptr, &extensionCount, nullptr));
-  std::vector<VkExtensionProperties> vkExtensions{ extensionCount };
-  VK_VALIDATE(vkEnumerateDeviceExtensionProperties(vkPhysicalDevice, nullptr, &extensionCount, vkExtensions.data()));
-  std::set<std::string> vkExtensionNames{};
-  for (u32 i{}; i < extensionCount; ++i)
-  {
-    vkExtensionNames.emplace(vkExtensions[i].extensionName);
-  }
-  return vkExtensionNames;
-}
 u32 VkRenderer::GetMemoryType(VkPhysicalDeviceMemoryProperties vkProperties, u32 typeBits, u32 properties, u32* typeIndex)
 {
   for (u32 i = 0; i < 32; i++)
@@ -134,19 +93,30 @@ VkPresentModeKHR VkRenderer::GetPresentMode(std::vector<VkPresentModeKHR> const&
 void VkRenderer::CreateInstance()
 {
   // Gather validation layers
-  std::set<std::string> availableLayers{ GetSupportedLayers() };
+  mVkLayerProperties = VkUtils::GetLayerProperties();
+  mVkLayerPropertyNames = VkUtils::GetLayerPropertyNames(mVkLayerProperties);
   std::printf("Available layers:\n");
-  for (auto const& name : availableLayers)
+  for (auto const& pVkLayerProperyName : mVkLayerPropertyNames)
   {
-    std::printf("\t%s\n", name.c_str());
+    std::printf("\t%s\n", pVkLayerProperyName);
+  }
+  // Gather instance extensions
+  std::printf("Instance extensions:\n");
+  for (auto const& pVkLayerProperyName : mVkLayerPropertyNames)
+  {
+    std::printf("\t%s\n", pVkLayerProperyName);
+    std::vector<VkExtensionProperties> vkInstanceExtensions{ VkUtils::GetInstanceExtensionProperties(pVkLayerProperyName) };
+    for (auto const& vkInstanceExtension : vkInstanceExtensions)
+    {
+      std::printf("\t\t%s\n", vkInstanceExtension.extensionName);
+    }
   }
   // Gather required extensions
-  std::set<std::string> requiredExtensions{ GetRequiredExtensions(mDebug) };
-  std::vector<s8 const*> requiredExtensionView{ TransformView(requiredExtensions) };
+  mVkRequiredExtensionPropertyNames = VkUtils::GetRequiredExtensionNames(mDebug);
   std::printf("Required extensions:\n");
-  for (auto const& name : requiredExtensions)
+  for (auto const& pVkRequiredExtensionPropertyName : mVkRequiredExtensionPropertyNames)
   {
-    std::printf("\t%s\n", name.c_str());
+    std::printf("\t%s\n", pVkRequiredExtensionPropertyName);
   }
   // Application info
   VkApplicationInfo vkApplicationInfo{};
@@ -160,8 +130,8 @@ void VkRenderer::CreateInstance()
   VkInstanceCreateInfo vkInstanceCreateInfo{};
   vkInstanceCreateInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
   vkInstanceCreateInfo.pApplicationInfo = &vkApplicationInfo;
-  vkInstanceCreateInfo.enabledExtensionCount = (u32)requiredExtensionView.size();
-  vkInstanceCreateInfo.ppEnabledExtensionNames = requiredExtensionView.data();
+  vkInstanceCreateInfo.enabledExtensionCount = (u32)mVkRequiredExtensionPropertyNames.size();
+  vkInstanceCreateInfo.ppEnabledExtensionNames = mVkRequiredExtensionPropertyNames.data();
   if (mDebug)
   {
     vkInstanceCreateInfo.enabledLayerCount = 1;
@@ -199,11 +169,12 @@ void VkRenderer::CreatePhysicalDevice()
   // Gather first device
   VK_VALIDATE(vkEnumeratePhysicalDevices(mVkInstance, &deviceCount, &mVkPhysicalDevice));
   // Gather supported extensions
-  std::set<std::string> supportedExtensions{ GetSupportedExtensions(mVkPhysicalDevice) };
+  mVkSupportedExtensionProperties = VkUtils::GetSupportedExtensionsProperties(mVkPhysicalDevice);
+  mVkSupportedExtensionPropertyNames = VkUtils::GetExtensionPropertyNames(mVkSupportedExtensionProperties);
   std::printf("Supported extensions:\n");
-  for (auto const& name : supportedExtensions)
+  for (auto const& pVkSupportedExtensionPropertyName : mVkSupportedExtensionPropertyNames)
   {
-    std::printf("\t%s\n", name.c_str());
+    std::printf("\t%s\n", pVkSupportedExtensionPropertyName);
   }
 }
 void VkRenderer::CreateLogicalDevice()
@@ -223,10 +194,8 @@ void VkRenderer::CreateLogicalDevice()
   VkDeviceCreateInfo vkDeviceCreateInfo{};
   vkDeviceCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
   vkDeviceCreateInfo.pQueueCreateInfos = vkDeviceQueueCreateInfos;
-  std::set<std::string> enabledExtensions{ GetSupportedExtensions(mVkPhysicalDevice) };
-  std::vector<s8 const*> enabledExtensionsView{ TransformView(enabledExtensions) };
-  vkDeviceCreateInfo.enabledExtensionCount = (u32)enabledExtensionsView.size();
-  vkDeviceCreateInfo.ppEnabledExtensionNames = enabledExtensionsView.data();
+  vkDeviceCreateInfo.enabledExtensionCount = (u32)mVkRequiredExtensionPropertyNames.size();
+  vkDeviceCreateInfo.ppEnabledExtensionNames = mVkRequiredExtensionPropertyNames.data();
   if (mGraphicsQueueFamily.value() == mPresentQueueFamily.value())
   {
     vkDeviceCreateInfo.queueCreateInfoCount = 1;

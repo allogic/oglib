@@ -19,7 +19,7 @@
 
 #include "VkCore.h"
 
-namespace acs
+namespace VkAcs
 {
   /*
   * Global parameters.
